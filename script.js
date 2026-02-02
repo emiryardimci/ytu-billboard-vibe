@@ -1,8 +1,7 @@
 /**
- * YTÜ Billboard Rezervasyon Sistemi - Final Clean Script
- * Version: 7.0 (Zero Duplicates, Standardized & Clean)
+ * YTÜ Billboard Rezervasyon Sistemi - v3.0 (Custom Modals & Live Badges)
  */
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxS8m9c6O7tTuGs7zuMUrdkzVhEA1w9JK2zEftURML4umwGuEB1gY1GxEgPJ1Dx1SpAwQ/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwACN5qgaaZCzJZqhzBxrHAJeRkjrM27r8e3lcv1foFtvtPKoff5KBiR5k3LPV2rxOSsQ/exec";
 
 const BILLBOARD_CODES = [
   "001", "002", "025", "026", "051", "052", "053", "054", "055", "056",
@@ -13,6 +12,7 @@ const BILLBOARD_CODES = [
 let secilenBillboards = [];
 let tarihSecildi = false;
 let occupiedBillboards = [];
+let pendingDeleteIds = null; // Store IDs for modal confirmation
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', kaydetButonGuncelle);
   });
+
+  // Modal Listeners
+  document.getElementById('btnConfirmYes').addEventListener('click', confirmDeleteAction);
+  document.getElementById('btnConfirmNo').addEventListener('click', closeModal);
 });
 
 // --- CORE LOGIC ---
@@ -104,10 +108,9 @@ function billboardGridOlustur() {
     } else if (occ) {
       item.classList.add('occupied');
 
-      // CLEAN TOOLTIP: Club | Date - Date
       const sDate = formatDateDisplay(occ.start);
       const eDate = formatDateDisplay(occ.end);
-      item.title = `${occ.kulup} | ${sDate} - ${eDate}`;
+      item.title = `DOLU: ${occ.kulup} | ${sDate} - ${eDate}`;
 
       const icon = document.createElement('span');
       icon.className = 'info-icon';
@@ -153,7 +156,6 @@ function rezervasyonKaydet() {
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        // OPERATION SEQUENCE: Refresh -> Hide Loading -> Show Alert
         veriListesiYukle(() => {
           setLoading(false);
           alertGoster('Rezervasyon Başarılı!', 'success');
@@ -170,10 +172,34 @@ function rezervasyonKaydet() {
     });
 }
 
-function grupSil(idxs, skipConfirm) {
-  if (!skipConfirm && !confirm('Bu rezervasyonları silmek istediğinize emin misiniz?')) return;
+// --- CUSTOM MODAL LOGIC ---
 
-  setLoading(true);
+function openModal(idxs) {
+  pendingDeleteIds = idxs;
+  const modal = document.getElementById('confirmModal');
+  if (modal) {
+    modal.classList.add('active');
+    // Animate content entrance
+    const content = modal.querySelector('.modal-content');
+    if (content) {
+      content.style.transform = 'scale(0.9)';
+      setTimeout(() => content.style.transform = 'scale(1)', 50);
+    }
+  }
+}
+
+function closeModal() {
+  pendingDeleteIds = null;
+  const modal = document.getElementById('confirmModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function confirmDeleteAction() {
+  if (!pendingDeleteIds) return;
+
+  const idxs = pendingDeleteIds;
+  closeModal(); // Close first
+  setLoading(true); // Then show loading
 
   const url = `${WEB_APP_URL}?action=deleteBatch&rows=${encodeURIComponent(JSON.stringify(idxs))}`;
 
@@ -181,7 +207,6 @@ function grupSil(idxs, skipConfirm) {
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        // OPERATION SEQUENCE: Refresh -> Hide Loading -> Show Alert
         veriListesiYukle(() => {
           setLoading(false);
           alertGoster('Kayıtlar Silindi.', 'success');
@@ -203,8 +228,13 @@ function grupSil(idxs, skipConfirm) {
     });
 }
 
+function grupSil(idxs) {
+  // Replace standard confirm with custom modal
+  openModal(idxs);
+}
+
 function tekilSil(rowIndex) {
-  grupSil([rowIndex], false);
+  grupSil([rowIndex]);
 }
 
 function veriListesiYukle(onComplete) {
@@ -238,7 +268,6 @@ function veriListesiYukle(onComplete) {
         const sortedItems = g.items.sort((a, b) => a.code.localeCompare(b.code));
         const allIdx = JSON.stringify(sortedItems.map(i => i.idx));
 
-        // Use '×' as content. CSS will handle layout centered.
         const codesHtml = sortedItems.map(i =>
           `<span class="code-badge">
              ${i.code}
@@ -246,17 +275,18 @@ function veriListesiYukle(onComplete) {
            </span>`
         ).join('');
 
+        // AUNT-FRIENDLY DATE COLORS APPLIED HERE
         return `
         <tr>
           <td><div class="code-list-container">${codesHtml}</div></td>
           <td>${escapeHtml(g.kulupAdi)}</td>
           <td>${escapeHtml(g.isimSoyisim)}</td>
           <td>${escapeHtml(g.iletisim)}</td>
-          <td>${formatDateDisplay(g.baslangicTarihi)}</td>
-          <td>${formatDateDisplay(g.bitisTarihi)}</td>
-          <td>${formatDateDisplay(g.kayitTarihi)}</td>
+          <td><span class="date-tag start">${formatDateDisplay(g.baslangicTarihi)}</span></td>
+          <td><span class="date-tag end">${formatDateDisplay(g.bitisTarihi)}</span></td>
+          <td><span class="date-tag log">${formatDateDisplay(g.kayitTarihi)}</span></td>
           <td style="text-align:center;">
-             <button class="btn-sil" onclick='grupSil(${allIdx}, false)'>Grubu Sil</button>
+             <button class="btn-sil" onclick='grupSil(${allIdx})'>Grubu Sil</button>
           </td>
         </tr>`;
       }).join('');
@@ -329,6 +359,19 @@ function durumGostergesiniGuncelle() {
 function secimSayaciniGuncelle() {
   const counter = document.getElementById('selectionCounter');
   const countSpan = document.getElementById('selectedCount');
+
+  // LIVE SELECTION BADGES LOGIC
+  const liveBadges = document.getElementById('liveSelectionBadges');
+
+  if (liveBadges) {
+    liveBadges.innerHTML = '';
+    secilenBillboards.forEach(code => {
+      const badge = document.createElement('span');
+      badge.className = 'live-badge';
+      badge.textContent = code;
+      liveBadges.appendChild(badge);
+    });
+  }
 
   if (counter) counter.style.display = secilenBillboards.length > 0 ? 'inline-block' : 'none';
   if (countSpan) countSpan.textContent = secilenBillboards.length;

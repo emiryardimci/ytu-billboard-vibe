@@ -58,7 +58,6 @@
       background: linear-gradient(to right, #60a5fa, #a78bfa);
       -webkit-background-clip: text;
       background-clip: text;
-      /* STANDARD FIX */
       -webkit-text-fill-color: transparent;
     }
 
@@ -153,6 +152,35 @@
       opacity: 0.7;
     }
 
+    /* LIVE BADGES CONTAINER */
+    .live-badges-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .live-badge {
+      background: var(--accent-primary);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      animation: popIn 0.3s ease;
+    }
+
+    @keyframes popIn {
+      from {
+        transform: scale(0);
+      }
+
+      to {
+        transform: scale(1);
+      }
+    }
+
     /* BILLBOARD GRID */
     .billboard-grid {
       display: grid;
@@ -176,7 +204,7 @@
       position: relative;
     }
 
-    /* INFO ICON */
+    /* INFO ICON CENTERING */
     .info-icon {
       position: absolute;
       top: 2px;
@@ -188,8 +216,11 @@
       border-radius: 50%;
       font-size: 10px;
       display: flex;
+      /* Flexbox */
       align-items: center;
+      /* Centering */
       justify-content: center;
+      /* Centering */
       font-weight: bold;
       pointer-events: none;
     }
@@ -234,6 +265,7 @@
       padding: 1rem;
       text-align: left;
       border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
     }
 
     th {
@@ -270,11 +302,11 @@
     /* PERFECT CENTERING DELETE BUTTON */
     .btn-xs-delete {
       display: inline-flex;
-      /* REQUIRED */
+      /* Flexbox */
       align-items: center;
-      /* REQUIRED */
+      /* Centering */
       justify-content: center;
-      /* REQUIRED */
+      /* Centering */
       width: 22px;
       height: 22px;
       border-radius: 50%;
@@ -287,7 +319,6 @@
       transition: all 0.2s ease;
       margin: 0;
       padding: 0;
-      /* Reset */
     }
 
     .btn-xs-delete:hover {
@@ -295,6 +326,34 @@
       color: white;
       transform: scale(1.1);
     }
+
+    /* AUNT-FRIENDLY DATE COLORS */
+    .date-tag {
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .date-tag.start {
+      color: #60a5fa;
+      background: rgba(96, 165, 250, 0.1);
+    }
+
+    /* Blue */
+    .date-tag.end {
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.1);
+    }
+
+    /* Red */
+    .date-tag.log {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      font-weight: 400;
+    }
+
+    /* Gray */
 
     .btn-sil {
       background: rgba(239, 68, 68, 0.1);
@@ -311,7 +370,7 @@
       color: white;
     }
 
-    /* ALERTS - VIBRANT & TOP */
+    /* ALERTS */
     .alert {
       position: fixed;
       top: 20px;
@@ -396,7 +455,6 @@
       background: #64748b;
     }
 
-    /* GLOWING ANIMATION */
     .status-light.green {
       background: var(--accent-green);
       box-shadow: 0 0 10px var(--accent-green);
@@ -421,6 +479,79 @@
         opacity: 1;
       }
     }
+
+    /* MODAL (CUSTOM) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 90000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      padding: 2rem;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      transform: scale(0.95);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-text {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .btn-modal {
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-modal.confirm {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    .btn-modal.cancel {
+      background: #334155;
+      color: white;
+    }
+
+    .btn-modal:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 
@@ -434,6 +565,18 @@
 
   <!-- Alert Box -->
   <div id="alertBox" class="alert">İşlem Tamamlandı</div>
+
+  <!-- Custom Modal -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-title">Emin misiniz?</div>
+      <p class="modal-text">Bu rezervasyon kaydı kalıcı olarak silinecektir. Bu işlem geri alınamaz.</p>
+      <div class="modal-actions">
+        <button id="btnConfirmNo" class="btn-modal cancel">İptal</button>
+        <button id="btnConfirmYes" class="btn-modal confirm">Evet, Sil</button>
+      </div>
+    </div>
+  </div>
 
   <div class="container">
     <header>
@@ -483,9 +626,13 @@
           Rezervasyonu Kaydet (<span id="selectedCount">0</span>)
         </button>
 
-        <div id="selectionCounter"
-          style="display:none; margin-top:1rem; text-align:center; font-size:0.9rem; color: var(--accent-primary);">
-          Seçili Billboardlar
+        <!-- Selection Counter & Live Badges -->
+        <div id="selectionCounter" style="display:none; margin-top:1rem; text-align:center;">
+          <span style="font-size:0.9rem; color: var(--accent-primary);">Seçili &bull; <span id="selectedCount">0</span>
+            Adet</span>
+          <div id="liveSelectionBadges" class="live-badges-container">
+            <!-- Badges will appear here -->
+          </div>
         </div>
       </div>
 
@@ -513,7 +660,7 @@
                   <th>İletişim</th>
                   <th>Başlangıç</th>
                   <th>Bitiş</th>
-                  <th>Kayıt Tarihi</th>
+                  <th>Kayıt Log</th>
                   <th>İşlem</th>
                 </tr>
               </thead>
