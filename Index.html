@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YTÜ Billboard Rezervasyon</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-primary: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-red: #dc2626;
+      /* Deep Red */
+      --accent-green: #16a34a;
+      /* Vibrant Green */
+      --border-color: #334155;
+      --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      /* STANDARD FIX */
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    /* LAYOUT Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 1.5rem;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* FORM */
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    /* BUTTONS */
+    .btn-primary {
+      width: 100%;
+      padding: 1rem;
+      background: var(--accent-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    /* BILLBOARD GRID */
+    .billboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 0.8rem;
+    }
+
+    .billboard-item {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #334155;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+      font-size: 0.9rem;
+      user-select: none;
+      position: relative;
+    }
+
+    /* INFO ICON */
+    .info-icon {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 14px;
+      height: 14px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border-radius: 50%;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      pointer-events: none;
+    }
+
+    .billboard-item.available:hover {
+      background: #475569;
+      transform: translateY(-2px);
+    }
+
+    .billboard-item.selected {
+      background: var(--accent-primary);
+      border-color: #60a5fa;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    }
+
+    .billboard-item.occupied {
+      background: #3f1a1a;
+      color: #fca5a5;
+      border-color: #7f1d1d;
+      cursor: not-allowed;
+      opacity: 0.9;
+    }
+
+    .billboard-item.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* TABLE */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 800px;
+    }
+
+    th,
+    td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .code-list-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .code-badge {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* PERFECT CENTERING DELETE BUTTON */
+    .btn-xs-delete {
+      display: inline-flex;
+      /* REQUIRED */
+      align-items: center;
+      /* REQUIRED */
+      justify-content: center;
+      /* REQUIRED */
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      font-weight: bold;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin: 0;
+      padding: 0;
+      /* Reset */
+    }
+
+    .btn-xs-delete:hover {
+      background: var(--accent-red);
+      color: white;
+      transform: scale(1.1);
+    }
+
+    .btn-sil {
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-sil:hover {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    /* ALERTS - VIBRANT & TOP */
+    .alert {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      background: #333;
+      color: white;
+      font-weight: 600;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      z-index: 999999;
+    }
+
+    .alert.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .alert-success {
+      background: var(--accent-green);
+      color: white;
+    }
+
+    .alert-error {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    /* LOADING OVERLAY */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 20000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--accent-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* STATUS INDICATOR */
+    .status-indicator {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-light {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #64748b;
+    }
+
+    /* GLOWING ANIMATION */
+    .status-light.green {
+      background: var(--accent-green);
+      box-shadow: 0 0 10px var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    .status-light.red {
+      background: var(--accent-red);
+      box-shadow: 0 0 10px var(--accent-red);
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+
+      100% {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>İşlem Tamamlanıyor...</p>
+  </div>
+
+  <!-- Alert Box -->
+  <div id="alertBox" class="alert">İşlem Tamamlandı</div>
+
+  <div class="container">
+    <header>
+      <h1>YTÜ Billboard Rezervasyon</h1>
+      <p class="subtitle">Yıldız Teknik Üniversitesi Kulüpler Birliği</p>
+    </header>
+
+    <div class="main-grid">
+      <!-- LEFT PANEL: FORM -->
+      <div class="card">
+        <div class="card-title">
+          Rezervasyon Detayları
+          <div id="statusIndicator" class="status-indicator">
+            <div id="statusLight" class="status-light"></div>
+            <span id="statusText">Tarih Bekleniyor</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Başlangıç Tarihi</label>
+          <input type="date" id="baslangicTarihi">
+        </div>
+
+        <div class="form-group">
+          <label>Bitiş Tarihi</label>
+          <input type="date" id="bitisTarihi">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+        <div class="form-group">
+          <label>Kulüp Adı</label>
+          <input type="text" id="kulupAdi" placeholder="Örn: YTU Yapay Zeka">
+        </div>
+
+        <div class="form-group">
+          <label>İsim Soyisim</label>
+          <input type="text" id="isimSoyisim" placeholder="Sorumlu Kişi">
+        </div>
+
+        <div class="form-group">
+          <label>İletişim</label>
+          <input type="tel" id="iletisim" placeholder="05XX XXX XX XX">
+        </div>
+
+        <button id="btnKaydet" class="btn-primary" onclick="rezervasyonKaydet()" disabled>
+          Rezervasyonu Kaydet (<span id="selectedCount">0</span>)
+        </button>
+
+        <div id="selectionCounter"
+          style="display:none; margin-top:1rem; text-align:center; font-size:0.9rem; color: var(--accent-primary);">
+          Seçili Billboardlar
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: GRID & LIST -->
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+
+        <!-- GRID -->
+        <div class="card">
+          <div class="card-title">Billboard Seçimi</div>
+          <div id="billboardGrid" class="billboard-grid">
+            <!-- JS will populate -->
+          </div>
+        </div>
+
+        <!-- LIST -->
+        <div class="card">
+          <div class="card-title">Mevcut Rezervasyonlar</div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Billboardlar</th>
+                  <th>Kulüp</th>
+                  <th>İsim</th>
+                  <th>İletişim</th>
+                  <th>Başlangıç</th>
+                  <th>Bitiş</th>
+                  <th>Kayıt Tarihi</th>
+                  <th>İşlem</th>
+                </tr>
+              </thead>
+              <tbody id="veriListesi">
+                <tr>
+                  <td colspan="8" style="text-align:center; padding:2rem;">Yükleniyor...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

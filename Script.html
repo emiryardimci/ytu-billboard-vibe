@@ -1,0 +1,402 @@
+/**
+ * YTÜ Billboard Rezervasyon Sistemi - script.js
+ * Google Apps Script içinde çalışır
+ */
+const WEB_APP_URL = "";
+
+// Billboard kodları
+const BILLBOARD_CODES = ['001', '002', '025', '026', '092', '093', '053', '054', '051', '052', '063', '064', '065', '066', '067', '075', '076', '079', '055', '056', '057', '062', '060', '061', '058', '059'];
+
+let secilenBillboards = [];
+let tarihSecildi = false;
+let occupiedBillboards = [];
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+  billboardGridOlustur();
+  veriListesiYukle();
+  durumGostergesiniGuncelle();
+  
+  document.getElementById('baslangicTarihi').addEventListener('change', tarihDegisti);
+  document.getElementById('bitisTarihi').addEventListener('change', tarihDegisti);
+  document.getElementById('kulupAdi').addEventListener('input', kaydetButonGuncelle);
+  document.getElementById('isimSoyisim').addEventListener('input', kaydetButonGuncelle);
+  document.getElementById('iletisim').addEventListener('input', kaydetButonGuncelle);
+});
+
+// Durum göstergesini güncelle
+function durumGostergesiniGuncelle() {
+  var indicator = document.getElementById('statusIndicator');
+  var light = document.getElementById('statusLight');
+  var text = document.getElementById('statusText');
+  
+  if (!indicator || !light || !text) return;
+  
+  if (tarihSecildi) {
+    indicator.className = 'status-indicator unlocked';
+    light.className = 'status-light green';
+    text.textContent = 'Billboardlar açıldı! Yeşil olanlar müsait, kırmızı olanlar dolu. Birden fazla seçebilirsiniz.';
+  } else {
+    indicator.className = 'status-indicator locked';
+    light.className = 'status-light red';
+    text.textContent = 'Billboardlar kilitli. Önce tarih seçimi yapınız.';
+  }
+}
+
+// Seçim sayacını güncelle
+function secimSayaciniGuncelle() {
+  var counter = document.getElementById('selectionCounter');
+  var countSpan = document.getElementById('selectedCount');
+  
+  if (!counter || !countSpan) return;
+  
+  if (secilenBillboards.length > 0) {
+    counter.style.display = 'inline-block';
+    countSpan.textContent = secilenBillboards.length;
+  } else {
+    counter.style.display = 'none';
+  }
+}
+
+function tarihDegisti() {
+  tarihSecildi = false;
+  secilenBillboards = [];
+  billboardGridOlustur();
+  durumGostergesiniGuncelle();
+  secimSayaciniGuncelle();
+  
+  var baslangic = document.getElementById('baslangicTarihi').value;
+  var bitis = document.getElementById('bitisTarihi').value;
+  
+  if (!baslangic || !bitis) {
+    kaydetButonGuncelle();
+    return;
+  }
+  
+  if (new Date(bitis) < new Date(baslangic)) {
+    alertGoster('Bitiş tarihi, başlangıç tarihinden önce olamaz.', 'error');
+    kaydetButonGuncelle();
+    return;
+  }
+  
+  // Tarih seçildiği an otomatik olarak Sheets'i tara
+  tarihKontrol();
+}
+
+function billboardGridOlustur() {
+  var grid = document.getElementById('billboardGrid');
+  if (!grid) return;
+  
+  grid.innerHTML = '';
+  
+  BILLBOARD_CODES.forEach(function(code) {
+    var item = document.createElement('div');
+    item.className = 'billboard-item';
+    item.textContent = code;
+    item.dataset.code = code;
+    
+    if (!tarihSecildi) {
+      item.classList.add('disabled');
+    } else if (occupiedBillboards.indexOf(code) !== -1) {
+      item.classList.add('occupied');
+    } else {
+      item.classList.add('available');
+      item.addEventListener('click', function() { billboardSec(code); });
+    }
+    
+    if (secilenBillboards.indexOf(code) !== -1) {
+      item.classList.add('selected');
+    }
+    
+    grid.appendChild(item);
+  });
+}
+
+function billboardSec(code) {
+  var index = secilenBillboards.indexOf(code);
+  if (index !== -1) {
+    secilenBillboards.splice(index, 1);
+  } else {
+    secilenBillboards.push(code);
+  }
+  billboardGridOlustur();
+  kaydetButonGuncelle();
+  secimSayaciniGuncelle();
+}
+
+function kaydetButonGuncelle() {
+  var btn = document.getElementById('btnKaydet');
+  if (!btn) return;
+  
+  var baslangic = document.getElementById('baslangicTarihi').value;
+  var bitis = document.getElementById('bitisTarihi').value;
+  var kulup = document.getElementById('kulupAdi').value.trim();
+  var isim = document.getElementById('isimSoyisim').value.trim();
+  var iletisim = document.getElementById('iletisim').value.trim();
+  
+  btn.disabled = !(tarihSecildi && secilenBillboards.length > 0 && baslangic && bitis && kulup && isim && iletisim);
+}
+
+function tarihKontrol() {
+  var baslangic = document.getElementById('baslangicTarihi').value;
+  var bitis = document.getElementById('bitisTarihi').value;
+  
+  if (!baslangic || !bitis) {
+    alertGoster('Lütfen başlangıç ve bitiş tarihlerini girin.', 'error');
+    return;
+  }
+  
+  if (new Date(bitis) < new Date(baslangic)) {
+    alertGoster('Bitiş tarihi, başlangıç tarihinden önce olamaz.', 'error');
+    return;
+  }
+  
+  // Google Apps Script içinde mi çalışıyor kontrol et
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        occupiedBillboards = Array.isArray(data) ? data : [];
+        tarihSecildi = true;
+        secilenBillboards = [];
+        billboardGridOlustur();
+        kaydetButonGuncelle();
+        durumGostergesiniGuncelle();
+        secimSayaciniGuncelle();
+        alertGoster('Tarih aralığı kontrol edildi. Müsait billboardları seçebilirsiniz.', 'success');
+      })
+      .withFailureHandler(function(err) {
+        alertGoster('Hata: ' + err.message, 'error');
+      })
+      .getOccupiedBillboards(baslangic, bitis);
+    return;
+  }
+  
+  // Standalone mod - fetch kullan
+  if (!WEB_APP_URL) {
+    alertGoster('Lütfen script.js dosyasındaki WEB_APP_URL değişkenine Google Web Uygulaması URL\'nizi yapıştırın.', 'error');
+    return;
+  }
+  
+  var url = WEB_APP_URL + '?action=getOccupied&baslangic=' + encodeURIComponent(baslangic) + '&bitis=' + encodeURIComponent(bitis);
+  
+  fetch(url)
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      occupiedBillboards = Array.isArray(data) ? data : [];
+      tarihSecildi = true;
+      secilenBillboards = [];
+      billboardGridOlustur();
+      kaydetButonGuncelle();
+      durumGostergesiniGuncelle();
+      secimSayaciniGuncelle();
+      alertGoster('Tarih aralığı kontrol edildi. Müsait billboardları seçebilirsiniz.', 'success');
+    })
+    .catch(function(err) {
+      alertGoster('Hata: ' + (err.message || 'Veriler alınamadı. WEB_APP_URL doğru mu?'), 'error');
+    });
+}
+
+function rezervasyonKaydet() {
+  var baslangic = document.getElementById('baslangicTarihi').value;
+  var bitis = document.getElementById('bitisTarihi').value;
+  var kulup = document.getElementById('kulupAdi').value.trim();
+  var isim = document.getElementById('isimSoyisim').value.trim();
+  var iletisim = document.getElementById('iletisim').value.trim();
+  
+  if (secilenBillboards.length === 0 || !baslangic || !bitis || !kulup || !isim || !iletisim) {
+    alertGoster('Lütfen tüm alanları doldurun ve en az bir billboard seçin.', 'error');
+    return;
+  }
+  
+  var btn = document.getElementById('btnKaydet');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> Kaydediliyor...';
+  
+  // Google Apps Script içinde mi çalışıyor kontrol et
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        alertGoster(result.message, 'success');
+        formTemizle();
+        veriListesiYukle();
+        tarihKontrol();
+        btn.innerHTML = 'Rezervasyonu Kaydet';
+        btn.disabled = false;
+        kaydetButonGuncelle();
+      })
+      .withFailureHandler(function(err) {
+        alertGoster('Kayıt hatası: ' + err.message, 'error');
+        btn.innerHTML = 'Rezervasyonu Kaydet';
+        btn.disabled = false;
+        kaydetButonGuncelle();
+      })
+      .saveReservations(secilenBillboards, kulup, isim, iletisim, baslangic, bitis);
+    return;
+  }
+  
+  // Standalone mod - fetch kullan
+  if (!WEB_APP_URL) {
+    alertGoster('Lütfen script.js dosyasındaki WEB_APP_URL değişkenine Google Web Uygulaması URL\'nizi yapıştırın.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = 'Rezervasyonu Kaydet';
+    return;
+  }
+  
+  var params = new URLSearchParams({
+    action: 'save',
+    billboardKodlari: secilenBillboards.join(','),
+    kulupAdi: kulup,
+    isimSoyisim: isim,
+    iletisim: iletisim,
+    baslangicTarihi: baslangic,
+    bitisTarihi: bitis
+  });
+  var url = WEB_APP_URL + '?' + params.toString();
+  
+  fetch(url)
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+      if (result && result.success) {
+        alertGoster(result.message || 'Rezervasyon başarıyla kaydedildi.', 'success');
+      } else {
+        alertGoster(result && result.message ? result.message : 'Kayıt sırasında bir hata oluştu.', 'error');
+      }
+      formTemizle();
+      veriListesiYukle();
+      tarihKontrol();
+      btn.innerHTML = 'Rezervasyonu Kaydet';
+      btn.disabled = false;
+      kaydetButonGuncelle();
+    })
+    .catch(function(err) {
+      alertGoster('Kayıt hatası: ' + (err.message || 'Bağlantı kurulamadı.'), 'error');
+      btn.innerHTML = 'Rezervasyonu Kaydet';
+      btn.disabled = false;
+      kaydetButonGuncelle();
+    });
+}
+
+function formTemizle() {
+  document.getElementById('kulupAdi').value = '';
+  document.getElementById('isimSoyisim').value = '';
+  document.getElementById('iletisim').value = '';
+  document.getElementById('baslangicTarihi').value = '';
+  document.getElementById('bitisTarihi').value = '';
+  tarihSecildi = false;
+  occupiedBillboards = [];
+  secilenBillboards = [];
+  billboardGridOlustur();
+  kaydetButonGuncelle();
+  secimSayaciniGuncelle();
+  durumGostergesiniGuncelle();
+}
+
+function veriListesiYukle() {
+  var tbody = document.getElementById('veriListesi');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Yükleniyor...</td></tr>';
+  
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(veriListesiRender)
+      .withFailureHandler(function(err) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Veriler yüklenirken hata: ' + escapeHtml(err.message) + '</td></tr>';
+      })
+      .getAllReservations();
+    return;
+  }
+  
+  if (!WEB_APP_URL) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">WEB_APP_URL ayarlanmadı.</td></tr>';
+    return;
+  }
+  
+  var url = WEB_APP_URL + '?action=getReservations';
+  fetch(url)
+    .then(function(response) { return response.json(); })
+    .then(veriListesiRender)
+    .catch(function(err) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Veriler yüklenirken hata: ' + escapeHtml(err.message || 'Bağlantı kurulamadı') + '</td></tr>';
+    });
+}
+
+function satirSil(sheetRowIndex) {
+  if (!confirm('Bu kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) alertGoster(result.message, 'success');
+        else alertGoster(result && result.message ? result.message : 'Silme başarısız.', 'error');
+        veriListesiYukle();
+      })
+      .withFailureHandler(function(err) {
+        alertGoster('Silme hatası: ' + err.message, 'error');
+        veriListesiYukle();
+      })
+      .deleteReservationByRow(sheetRowIndex);
+    return;
+  }
+  if (!WEB_APP_URL) { alertGoster('WEB_APP_URL ayarlanmadı.', 'error'); return; }
+  var url = WEB_APP_URL + '?action=delete&row=' + encodeURIComponent(sheetRowIndex);
+  fetch(url)
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+      if (result && result.success) alertGoster(result.message, 'success');
+      else alertGoster(result && result.message ? result.message : 'Silme başarısız.', 'error');
+      veriListesiYukle();
+    })
+    .catch(function(err) {
+      alertGoster('Silme hatası: ' + (err.message || 'Bağlantı kurulamadı.'), 'error');
+      veriListesiYukle();
+    });
+}
+
+function veriListesiRender(data) {
+  var tbody = document.getElementById('veriListesi');
+  if (!tbody) return;
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Henüz kayıt bulunmuyor.</td></tr>';
+    return;
+  }
+  var bugun = new Date();
+  bugun.setHours(0, 0, 0, 0);
+  tbody.innerHTML = data.map(function(row) {
+    var bitisTarihi = new Date(row.bitisTarihi);
+    bitisTarihi.setHours(0, 0, 0, 0);
+    var expired = bitisTarihi < bugun;
+    var rowIndex = row.rowIndex || 0;
+    return '<tr class="' + (expired ? 'expired' : '') + '">' +
+      '<td><strong>' + escapeHtml(row.billboardKodu) + '</strong></td>' +
+      '<td>' + escapeHtml(row.kulupAdi) + '</td>' +
+      '<td>' + escapeHtml(row.isimSoyisim) + '</td>' +
+      '<td>' + escapeHtml(row.iletisim) + '</td>' +
+      '<td>' + formatDate(row.baslangicTarihi) + '</td>' +
+      '<td>' + formatDate(row.bitisTarihi) + '</td>' +
+      '<td>' + escapeHtml(row.kayitTarihi) + '</td>' +
+      '<td><button type="button" class="btn-sil" onclick="satirSil(' + rowIndex + ')" title="Bu kaydı sil">Sil</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  var d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('tr-TR');
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function alertGoster(mesaj, tip) {
+  var box = document.getElementById('alertBox');
+  if (!box) return;
+  
+  box.className = 'alert alert-' + (tip === 'success' ? 'success' : 'error') + ' show';
+  box.textContent = mesaj;
+  setTimeout(function() { box.classList.remove('show'); }, 5000);
+}
